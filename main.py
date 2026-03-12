@@ -29,8 +29,9 @@ import os
 
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8325285069:AAHLmn__ebAMG7gZy6WL-COq4BbCqvkcVVs"
-OWNER_ID = 8469461108  # Updated owner ID
+OWNER_ID = 8469461108
 DATABASE_FILE = "bot_database.sqlite3"
+DEFAULT_PHOTO_URL = "https://i.ibb.co.com/zc1kPLp/8e672428f6fc29cc1bdfd6f9e45d30d4.jpg"
 
 # Conversation states
 ASK_CHAT_ID, CONFIRM_ADD = range(2)
@@ -225,10 +226,13 @@ class MessageFormatter:
         username = user_data.get('username', 'N/A')
         group = group_title
         
+        # Handle case when username is not set
+        username_display = f"@{username}" if username != "N/A" else bold_unicode("𝐍𝐨 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞")
+        
         return f"""🎉 {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞!')}
 👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
 🆔 {bold_unicode('𝐔𝐬𝐞𝐫 𝐈𝐃:')} {user_id}
-🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
+🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} {username_display}
 🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞 𝐋𝐢𝐧𝐤:')} [🔗 {bold_unicode('𝐂𝐥𝐢𝐜𝐤 𝐇𝐞𝐫𝐞')}](tg://user?id={user_data.get('user_id')})
 ⚡ {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨')} {group}
 {bold_unicode('𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 𝐣𝐨𝐢𝐧𝐞𝐝 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩!')}"""
@@ -325,10 +329,13 @@ class MessageFormatter:
         user_id = str(user_data.get('user_id', 'N/A'))
         username = user_data.get('username', 'N/A')
         
+        # Handle case when username is not set
+        username_display = f"@{username}" if username != "N/A" else bold_unicode("𝐍𝐨 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞")
+        
         return f"""╔══════《 🔥 {bold_unicode('𝐏𝐫𝐢𝐯𝐚𝐭𝐞 𝐌𝐨𝐦𝐞𝐧𝐭')} 》══════╗
 👤 {bold_unicode('𝐍𝐚𝐦𝐞:')} {full_name}
 🆔 {bold_unicode('𝐈𝐃:')} {user_id}
-🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
+🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} {username_display}
 💋 {bold_unicode('𝐒𝐞𝐜𝐫𝐞𝐭 𝐋𝐢𝐧𝐤:')} [🔞 {bold_unicode('𝐓𝐨𝐮𝐜𝐡 𝐌𝐞')}](tg://user?id={user_data.get('user_id')})
 ╰═══════《 💕 𝐄𝐧𝐣𝐨𝐲 》═══════╝"""
 
@@ -377,10 +384,13 @@ class MessageFormatter:
         username = user_data.get('username', 'N/A')
         chat = chat_title
         
+        # Handle case when username is not set
+        username_display = f"@{username}" if username != "N/A" else bold_unicode("𝐍𝐨 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞")
+        
         return f"""📋 {bold_unicode('𝐔𝐬𝐞𝐫 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧')}
 👤 {bold_unicode('𝐍𝐚𝐦𝐞:')} {full_name}
 🆔 {bold_unicode('𝐈𝐃:')} {user_id}
-🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
+🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} {username_display}
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩:')} {chat}
 ⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐬:')} {warn_count}
 🔗 {bold_unicode('𝐋𝐢𝐧𝐤:')} [👤 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞')}](tg://user?id={user_data.get('user_id')})"""
@@ -403,6 +413,7 @@ class BotHandlers:
             return False
     
     async def get_user_profile_photo(self, context: ContextTypes.DEFAULT_TYPE, user_id: int):
+        """Get user profile photo or return None if not found"""
         try:
             photos = await context.bot.get_user_profile_photos(user_id, limit=1)
             if photos.total_count > 0:
@@ -847,7 +858,7 @@ class BotHandlers:
                 logger.error(f"Failed to delete message: {e}")
     
     async def handle_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle new members joining"""
+        """Handle new members joining - with default profile picture"""
         if not update.message.new_chat_members:
             return
             
@@ -868,11 +879,13 @@ class BotHandlers:
                 'username': new_member.username or "N/A"
             }
             
+            # Try to get the user's profile photo
             photo_id = await self.get_user_profile_photo(context, new_member.id)
             welcome_text = self.formatter.welcome_message(user_data, chat.title or "Group")
             
             try:
                 if photo_id:
+                    # User has profile photo
                     await context.bot.send_photo(
                         chat.id,
                         photo=photo_id,
@@ -880,14 +893,25 @@ class BotHandlers:
                         parse_mode=ParseMode.MARKDOWN
                     )
                 else:
-                    await context.bot.send_message(
+                    # User has no profile photo - send default image from URL
+                    await context.bot.send_photo(
                         chat.id,
-                        welcome_text,
+                        photo=DEFAULT_PHOTO_URL,
+                        caption=welcome_text,
                         parse_mode=ParseMode.MARKDOWN
                     )
                 logger.info(f"Welcome message sent to {new_member.id} in {chat.id}")
             except Exception as e:
                 logger.error(f"Failed to send welcome message: {e}")
+                # Fallback to text only if photo fails
+                try:
+                    await context.bot.send_message(
+                        chat.id,
+                        welcome_text,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                except:
+                    pass
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
@@ -1277,6 +1301,7 @@ def main():
     print(f"🤖 Bot started! Owner ID: {OWNER_ID}")
     print(f"📁 Database: {DATABASE_FILE}")
     print("🌐 Flask server running - Bot is alive!")
+    print(f"🖼️ Default profile picture URL: {DEFAULT_PHOTO_URL}")
     print("Press Ctrl+C to stop")
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)

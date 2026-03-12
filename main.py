@@ -6,7 +6,7 @@ import sqlite3
 import re
 import threading
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from contextlib import contextmanager
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ChatMember, ChatPermissions
@@ -24,12 +24,12 @@ from telegram.constants import ParseMode
 from telegram.error import TelegramError
 
 # Flask for keeping the bot alive
-from flask import Flask, jsonify, render_template_string
+from flask import Flask
 import os
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8325285069:AAHLmn__ebAMG7gZy6WL-COq4BbCqvkcVVs"  # Replace with your actual token
-OWNER_ID = 8469461108
+BOT_TOKEN = "8325285069:AAHLmn__ebAMG7gZy6WL-COq4BbCqvkcVVs"
+OWNER_ID = 8469461108  # Updated owner ID
 DATABASE_FILE = "bot_database.sqlite3"
 
 # Conversation states
@@ -41,9 +41,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ==================== FLASK DASHBOARD ====================
+# ==================== FLASK KEEP ALIVE ====================
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+
+# ==================== UNICODE BOLD CONVERTER ====================
 def bold_unicode(text: str) -> str:
     bold_map = {
         'A': '𝐀', 'B': '𝐁', 'C': '𝐂', 'D': '𝐃', 'E': '𝐄', 'F': '𝐅', 'G': '𝐆',
@@ -61,221 +70,6 @@ def bold_unicode(text: str) -> str:
     for char in text:
         result += bold_map.get(char, char)
     return result
-
-DASHBOARD_HTML = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Dashboard</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .dashboard {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 30px;
-            width: 90%;
-            max-width: 800px;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        .stat-card h3 {
-            margin: 0;
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-        .stat-card .value {
-            font-size: 3em;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        .status {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-left: 5px solid #28a745;
-        }
-        .status.online {
-            border-left-color: #28a745;
-        }
-        .refresh-btn {
-            display: block;
-            width: 200px;
-            margin: 0 auto;
-            padding: 12px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-            text-decoration: none;
-        }
-        .refresh-btn:hover {
-            background: #764ba2;
-            transform: scale(1.05);
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #666;
-            font-size: 0.9em;
-        }
-        .bot-name {
-            font-weight: bold;
-            color: #667eea;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #667eea;
-            color: white;
-        }
-        tr:hover {
-            background: #f5f5f5;
-        }
-        .section-title {
-            font-size: 1.5em;
-            margin: 20px 0 10px;
-            color: #333;
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard">
-        <h1>🤖 Bot Control Panel</h1>
-        
-        <div class="status online">
-            <strong>🟢 Bot Status:</strong> Online and running smoothly
-        </div>
-        
-        <div class="stats-grid" id="stats">
-            <div class="stat-card">
-                <h3>Total Users</h3>
-                <div class="value" id="total-users">{{ total_users_bold }}</div>
-            </div>
-            <div class="stat-card">
-                <h3>Total Groups</h3>
-                <div class="value" id="total-groups">{{ total_groups_bold }}</div>
-            </div>
-            <div class="stat-card">
-                <h3>Maintenance</h3>
-                <div class="value" id="maintenance">{{ maintenance_bold }}</div>
-            </div>
-            <div class="stat-card">
-                <h3>Uptime</h3>
-                <div class="value" id="uptime">{{ uptime_bold }}</div>
-            </div>
-        </div>
-
-        <div class="section-title">📊 Recent Groups</div>
-        <table id="groups-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Owner ID</th>
-                    <th>Added Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for group in recent_groups %}
-                <tr>
-                    <td>{{ group.group_id }}</td>
-                    <td>{{ group.title }}</td>
-                    <td>{{ group.owner_id }}</td>
-                    <td>{{ group.added_date[:10] }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <a href="/" class="refresh-btn">🔄 Refresh Dashboard</a>
-        
-        <div class="footer">
-            <span class="bot-name">Premium Group Bot</span> | Powered by Telegram
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-def get_db_stats():
-    """Fetch stats from database for dashboard"""
-    db = DatabaseManager(DATABASE_FILE)
-    stats = db.get_stats()
-    recent_groups = db.get_all_groups()[:5]
-    stats['total_users_bold'] = bold_unicode(str(stats['total_users']))
-    stats['total_groups_bold'] = bold_unicode(str(stats['total_groups']))
-    stats['maintenance_bold'] = bold_unicode("✅ Active" if stats['maintenance'] else "❌ Inactive")
-    stats['uptime_bold'] = bold_unicode("24/7")
-    return stats, recent_groups
-
-@app.route('/')
-def dashboard():
-    stats, recent_groups = get_db_stats()
-    return render_template_string(
-        DASHBOARD_HTML,
-        total_users_bold=stats['total_users_bold'],
-        total_groups_bold=stats['total_groups_bold'],
-        maintenance_bold=stats['maintenance_bold'],
-        uptime_bold=stats['uptime_bold'],
-        recent_groups=recent_groups
-    )
-
-@app.route('/stats')
-def stats_json():
-    stats, recent_groups = get_db_stats()
-    return jsonify({
-        'stats': stats,
-        'recent_groups': [dict(group) for group in recent_groups]
-    })
-
-def run_flask():
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 # ==================== DATABASE MANAGER ====================
 class DatabaseManager:
@@ -309,18 +103,8 @@ class DatabaseManager:
                     title TEXT NOT NULL,
                     owner_id INTEGER NOT NULL,
                     added_date TEXT NOT NULL,
-                    locked INTEGER DEFAULT 0,
+                    welcome_enabled INTEGER DEFAULT 1,
                     FOREIGN KEY (owner_id) REFERENCES users(user_id)
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS warnings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    group_id INTEGER NOT NULL,
-                    admin_id INTEGER NOT NULL,
-                    reason TEXT,
-                    date TEXT NOT NULL
                 )
             """)
             cursor.execute("""
@@ -402,44 +186,6 @@ class DatabaseManager:
             row = cursor.fetchone()
             return dict(row) if row else None
     
-    def set_group_lock(self, group_id: int, locked: bool):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE groups SET locked = ? WHERE group_id = ?", (1 if locked else 0, group_id))
-            conn.commit()
-    
-    def is_group_locked(self, group_id: int) -> bool:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT locked FROM groups WHERE group_id = ?", (group_id,))
-            row = cursor.fetchone()
-            return row and row['locked'] == 1
-    
-    def add_warning(self, user_id: int, group_id: int, admin_id: int, reason: str = ""):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO warnings (user_id, group_id, admin_id, reason, date)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, group_id, admin_id, reason, datetime.now().isoformat()))
-            conn.commit()
-    
-    def get_warnings(self, user_id: int, group_id: int) -> List[Dict]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM warnings 
-                WHERE user_id = ? AND group_id = ?
-                ORDER BY date DESC
-            """, (user_id, group_id))
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def clear_warnings(self, user_id: int, group_id: int):
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM warnings WHERE user_id = ? AND group_id = ?", (user_id, group_id))
-            conn.commit()
-    
     def is_maintenance_mode(self) -> bool:
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -479,16 +225,12 @@ class MessageFormatter:
         username = user_data.get('username', 'N/A')
         group = group_title
         
-        profile_link = f"[🔗 {bold_unicode('Click Here')}](tg://user?id={user_data.get('user_id')})"
-        
-        return f"""╔═══《 🎉 {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞!')} 》═══╗
+        return f"""🎉 {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞!')}
 👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
 🆔 {bold_unicode('𝐔𝐬𝐞𝐫 𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
-🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞 𝐋𝐢𝐧𝐤:')} {profile_link}
-╰═══════《 ⚡ 》═══════╝
-{bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨')} {group}
-━━━━━━━━━━━━━━━━━━━━━━
+🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞 𝐋𝐢𝐧𝐤:')} [🔗 {bold_unicode('𝐂𝐥𝐢𝐜𝐤 𝐇𝐞𝐫𝐞')}](tg://user?id={user_data.get('user_id')})
+⚡ {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨')} {group}
 {bold_unicode('𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 𝐣𝐨𝐢𝐧𝐞𝐝 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩!')}"""
 
     @staticmethod
@@ -525,7 +267,7 @@ class MessageFormatter:
    {bold_unicode('𝐌𝐚𝐤𝐞 𝐬𝐮𝐫𝐞 𝐭𝐨 𝐚𝐝𝐦𝐢𝐧 𝐢𝐭!')}
 
 2️⃣ {bold_unicode('𝐑𝐞𝐠𝐢𝐬𝐭𝐞𝐫 𝐲𝐨𝐮𝐫 𝐠𝐫𝐨𝐮𝐩')}
-   • {bold_unicode('𝐂𝐥𝐢𝐜𝐤')} "➕ {bold_unicode('Add Group')}"
+   • {bold_unicode('𝐂𝐥𝐢𝐜𝐤')} "➕ {bold_unicode('𝐀𝐝𝐝 𝐆𝐫𝐨𝐮𝐩')}"
    • {bold_unicode('𝐒𝐞𝐧𝐝 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩 𝐜𝐡𝐚𝐭 𝐈𝐃')}
    • {bold_unicode('𝐂𝐨𝐧𝐟𝐢𝐫𝐦 𝐭𝐡𝐞 𝐝𝐞𝐭𝐚𝐢𝐥𝐬')}
 
@@ -534,25 +276,18 @@ class MessageFormatter:
    • 🔒 {bold_unicode('𝐋𝐢𝐧𝐤 𝐩𝐫𝐨𝐭𝐞𝐜𝐭𝐢𝐨𝐧')}
    • 🚫 {bold_unicode('𝐀𝐮𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞𝐬/𝐢𝐧𝐯𝐢𝐭𝐞𝐬')}
 
-4️⃣ {bold_unicode('𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲):')}
-   • /mute [time] - {bold_unicode('Mute user (e.g. 1h, 30m)')}
-   • /unmute - {bold_unicode('Unmute user')}
-   • /kick - {bold_unicode('Kick user')}
-   • /ban - {bold_unicode('Ban user')}
-   • /unban <id> - {bold_unicode('Unban user by ID')}
-   • /warn [reason] - {bold_unicode('Warn user')}
-   • /warnings - {bold_unicode('Show warnings')}
-   • /del - {bold_unicode('Delete replied message')}
-   • /pin - {bold_unicode('Pin message')}
-   • /unpin - {bold_unicode('Unpin message')}
-   • /purge [N] - {bold_unicode('Delete N messages')}
-   • /lock - {bold_unicode('Lock group (only admins)')}
-   • /unlock - {bold_unicode('Unlock group')}
-   • /settings - {bold_unicode('Show group settings')}
-
-5️⃣ {bold_unicode('𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬 (𝐄𝐯𝐞𝐫𝐲𝐨𝐧𝐞):')}
-   • /info - {bold_unicode('Get user info')}
-   • /warnings - {bold_unicode('See your warnings')}
+4️⃣ {bold_unicode('𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬:')}
+   • /ban - {bold_unicode('𝐁𝐚𝐧 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /unban - {bold_unicode('𝐔𝐧𝐛𝐚𝐧 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /kick - {bold_unicode('𝐊𝐢𝐜𝐤 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /mute - {bold_unicode('𝐌𝐮𝐭𝐞 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /unmute - {bold_unicode('𝐔𝐧𝐦𝐮𝐭𝐞 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /warn - {bold_unicode('𝐖𝐚𝐫𝐧 𝐮𝐬𝐞𝐫 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /warns - {bold_unicode('𝐒𝐡𝐨𝐰 𝐮𝐬𝐞𝐫 𝐰𝐚𝐫𝐧𝐬 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /del - {bold_unicode('𝐃𝐞𝐥𝐞𝐭𝐞 𝐫𝐞𝐩𝐥𝐢𝐞𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /pin - {bold_unicode('𝐏𝐢𝐧 𝐫𝐞𝐩𝐥𝐢𝐞𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /unpin - {bold_unicode('𝐔𝐧𝐩𝐢𝐧 𝐫𝐞𝐩𝐥𝐢𝐞𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 (𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲)')}
+   • /info - {bold_unicode('𝐆𝐞𝐭 𝐮𝐬𝐞𝐫 𝐢𝐧𝐟𝐨 (𝐄𝐯𝐞𝐫𝐲𝐨𝐧𝐞)')}
 
 {bold_unicode('𝐍𝐞𝐞𝐝 𝐡𝐞𝐥𝐩? 𝐂𝐨𝐧𝐭𝐚𝐜𝐭 @𝐚𝐝𝐦𝐢𝐧')}"""
 
@@ -610,15 +345,33 @@ class MessageFormatter:
         return f"""✅ {bold_unicode(text)}"""
 
     @staticmethod
-    def ban_message(user_data: Dict, admin_name: str) -> str:
+    def action_message(action: str, user_data: Dict, admin_name: str, duration: str = None) -> str:
         full_name = user_data.get('full_name', 'User')
         admin = admin_name
-        return f"""🔨 {bold_unicode('𝐔𝐬𝐞𝐫 𝐁𝐚𝐧𝐧𝐞𝐝')}
+        action_bold = bold_unicode(action)
+        
+        if duration:
+            return f"""🔨 {action_bold}
 👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-👮 {bold_unicode('𝐁𝐚𝐧𝐧𝐞𝐝 𝐛𝐲:')} {admin}"""
+👮 {bold_unicode('𝐀𝐝𝐦𝐢𝐧:')} {admin}
+⏱️ {bold_unicode('𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧:')} {duration}"""
+        else:
+            return f"""🔨 {action_bold}
+👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
+👮 {bold_unicode('𝐀𝐝𝐦𝐢𝐧:')} {admin}"""
 
     @staticmethod
-    def user_info(user_data: Dict, chat_title: str, warnings: int = 0) -> str:
+    def warn_message(user_data: Dict, admin_name: str, warn_count: int, max_warns: int = 3) -> str:
+        full_name = user_data.get('full_name', 'User')
+        admin = admin_name
+        
+        return f"""⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐢𝐧𝐠')}
+👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
+👮 {bold_unicode('𝐀𝐝𝐦𝐢𝐧:')} {admin}
+🔢 {bold_unicode('𝐖𝐚𝐫𝐧𝐬:')} {warn_count}/{max_warns}"""
+
+    @staticmethod
+    def user_info(user_data: Dict, chat_title: str, warn_count: int = 0) -> str:
         full_name = user_data.get('full_name', 'User')
         user_id = str(user_data.get('user_id', 'N/A'))
         username = user_data.get('username', 'N/A')
@@ -629,73 +382,8 @@ class MessageFormatter:
 🆔 {bold_unicode('𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩:')} {chat}
-⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐢𝐧𝐠𝐬:')} {warnings}
+⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐬:')} {warn_count}
 🔗 {bold_unicode('𝐋𝐢𝐧𝐤:')} [👤 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞')}](tg://user?id={user_data.get('user_id')})"""
-
-    @staticmethod
-    def mute_message(user_data: Dict, admin_name: str, duration: str = "") -> str:
-        full_name = user_data.get('full_name', 'User')
-        admin = admin_name
-        duration_text = f" for {duration}" if duration else ""
-        return f"""🔇 {bold_unicode('𝐔𝐬𝐞𝐫 𝐌𝐮𝐭𝐞𝐝')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-⏱️ {bold_unicode('𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧:')} {duration if duration else 'Indefinite'}
-👮 {bold_unicode('𝐌𝐮𝐭𝐞𝐝 𝐛𝐲:')} {admin}"""
-
-    @staticmethod
-    def unmute_message(user_data: Dict, admin_name: str) -> str:
-        full_name = user_data.get('full_name', 'User')
-        admin = admin_name
-        return f"""🔊 {bold_unicode('𝐔𝐬𝐞𝐫 𝐔𝐧𝐦𝐮𝐭𝐞𝐝')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-👮 {bold_unicode('𝐔𝐧𝐦𝐮𝐭𝐞𝐝 𝐛𝐲:')} {admin}"""
-
-    @staticmethod
-    def kick_message(user_data: Dict, admin_name: str) -> str:
-        full_name = user_data.get('full_name', 'User')
-        admin = admin_name
-        return f"""👢 {bold_unicode('𝐔𝐬𝐞𝐫 𝐊𝐢𝐜𝐤𝐞𝐝')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-👮 {bold_unicode('𝐊𝐢𝐜𝐤𝐞𝐝 𝐛𝐲:')} {admin}"""
-
-    @staticmethod
-    def warn_message(user_data: Dict, admin_name: str, reason: str, warn_count: int) -> str:
-        full_name = user_data.get('full_name', 'User')
-        admin = admin_name
-        return f"""⚠️ {bold_unicode('𝐔𝐬𝐞𝐫 𝐖𝐚𝐫𝐧𝐞𝐝')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-📝 {bold_unicode('𝐑𝐞𝐚𝐬𝐨𝐧:')} {reason if reason else 'No reason'}
-🔢 {bold_unicode('𝐖𝐚𝐫𝐧𝐢𝐧𝐠𝐬:')} {warn_count}
-👮 {bold_unicode('𝐖𝐚𝐫𝐧𝐞𝐝 𝐛𝐲:')} {admin}"""
-
-    @staticmethod
-    def warnings_list(user_data: Dict, warnings: List[Dict]) -> str:
-        full_name = user_data.get('full_name', 'User')
-        if not warnings:
-            return f"""📋 {bold_unicode('𝐖𝐚𝐫𝐧𝐢𝐧𝐠𝐬')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-✅ {bold_unicode('𝐍𝐨 𝐰𝐚𝐫𝐧𝐢𝐧𝐠𝐬.')}"""
-        
-        text = f"""📋 {bold_unicode('𝐖𝐚𝐫𝐧𝐢𝐧𝐠𝐬')}
-👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
-━━━━━━━━━━━━━━━━━━━━━━\n"""
-        for i, w in enumerate(warnings, 1):
-            date = w['date'][:16].replace('T', ' ')
-            reason = w['reason'] if w['reason'] else 'No reason'
-            text += f"{i}. {date} - {reason}\n"
-        return text
-
-    @staticmethod
-    def purge_message(count: int) -> str:
-        return f"""🧹 {bold_unicode('𝐌𝐞𝐬𝐬𝐚𝐠𝐞𝐬 𝐏𝐮𝐫𝐠𝐞𝐝')}
-{bold_unicode('𝐃𝐞𝐥𝐞𝐭𝐞𝐝')} {count} {bold_unicode('𝐦𝐞𝐬𝐬𝐚𝐠𝐞𝐬.')}"""
-
-    @staticmethod
-    def settings_text(group_id: int, locked: bool) -> str:
-        lock_status = bold_unicode('𝐋𝐨𝐜𝐤𝐞𝐝') if locked else bold_unicode('𝐔𝐧𝐥𝐨𝐜𝐤𝐞𝐝')
-        return f"""⚙️ {bold_unicode('𝐆𝐫𝐨𝐮𝐩 𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬')}
-🆔 {bold_unicode('𝐆𝐫𝐨𝐮𝐩 𝐈𝐃:')} {group_id}
-🔒 {bold_unicode('𝐒𝐭𝐚𝐭𝐮𝐬:')} {lock_status}"""
 
 # ==================== BOT HANDLERS ====================
 class BotHandlers:
@@ -704,8 +392,9 @@ class BotHandlers:
         self.formatter = MessageFormatter()
         self.link_pattern = re.compile(r'(https?://|www\.|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?|t\.me/|@\w+)', re.IGNORECASE)
         self.pending_confirmation = {}
+        self.user_warns = {}  # Store warns: {chat_id: {user_id: count}}
+        self.muted_users = {}  # Store muted users with expiration
     
-    # ---------- Helper Methods ----------
     async def is_admin(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_id: int) -> bool:
         try:
             chat_member = await context.bot.get_chat_member(chat_id, user_id)
@@ -727,442 +416,430 @@ class BotHandlers:
             return False
         return bool(self.link_pattern.search(text))
     
-    async def get_target_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE, cmd: str) -> Tuple[Optional[int], Optional[str]]:
+    async def extract_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Extract user from reply or username/ID in command"""
+        user = None
+        
+        # Check if replying to a message
         if update.message.reply_to_message:
-            return update.message.reply_to_message.from_user.id, None
+            user = update.message.reply_to_message.from_user
+            return user
         
-        args = context.args
-        if not args:
-            return None, self.formatter.error_message("𝐏𝐥𝐞𝐚𝐬𝐞 𝐫𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃.")
+        # Check if command has arguments (username or ID)
+        if context.args:
+            arg = context.args[0]
+            # Check if it's a username (starts with @)
+            if arg.startswith('@'):
+                username = arg[1:]
+                try:
+                    # Try to get user by username in this chat
+                    chat = update.effective_chat
+                    async for member in context.bot.get_chat_administrators(chat.id):
+                        if member.user.username and member.user.username.lower() == username.lower():
+                            user = member.user
+                            break
+                except:
+                    pass
+            # Check if it's a user ID
+            elif arg.lstrip('-').isdigit():
+                user_id = int(arg)
+                try:
+                    # Try to get chat member
+                    chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+                    user = chat_member.user
+                except:
+                    pass
         
-        target = args[0]
-        if target.startswith('@'):
-            username = target[1:]
-            try:
-                chat = await context.bot.get_chat(username)
-                return chat.id, None
-            except:
-                return None, self.formatter.error_message("𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞 𝐧𝐨𝐭 𝐟𝐨𝐮𝐧𝐝.")
-        else:
-            try:
-                return int(target), None
-            except ValueError:
-                return None, self.formatter.error_message("𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐮𝐬𝐞𝐫 𝐈𝐃.")
-    
-    async def check_group_registered(self, update: Update) -> bool:
-        chat = update.effective_chat
-        if chat.type not in ["group", "supergroup"]:
-            return False
-        group = self.db.get_group(chat.id)
-        if not group:
-            await update.message.reply_text(self.formatter.error_message("𝐓𝐡𝐢𝐬 𝐠𝐫𝐨𝐮𝐩 𝐢𝐬 𝐧𝐨𝐭 𝐫𝐞𝐠𝐢𝐬𝐭𝐞𝐫𝐞𝐝. 𝐏𝐥𝐞𝐚𝐬𝐞 𝐚𝐬𝐤 𝐚𝐧 𝐚𝐝𝐦𝐢𝐧 𝐭𝐨 𝐚𝐝𝐝 𝐢𝐭 𝐢𝐧 𝐩𝐫𝐢𝐯𝐚𝐭𝐞 𝐜𝐡𝐚𝐭."))
-            return False
-        return True
-    
-    async def check_admin(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
-            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
-            return False
-        return True
-    
-    # ---------- Group Moderation Commands ----------
-    async def mute_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        user_id, error = await self.get_target_user(update, context, "mute")
-        if error:
-            await update.message.reply_text(error)
-            return
-        
-        args = context.args
-        duration_str = None
-        if len(args) > 1:
-            duration_str = args[1]
-        elif update.message.reply_to_message and len(args) > 0:
-            duration_str = args[0] if args else None
-        
-        until_date = None
-        if duration_str:
-            match = re.match(r'^(\d+)([hmd])$', duration_str.lower())
-            if match:
-                num, unit = int(match.group(1)), match.group(2)
-                if unit == 'h':
-                    until_date = datetime.now() + timedelta(hours=num)
-                elif unit == 'm':
-                    until_date = datetime.now() + timedelta(minutes=num)
-                elif unit == 'd':
-                    until_date = datetime.now() + timedelta(days=num)
-            else:
-                await update.message.reply_text(self.formatter.error_message("𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐝𝐮𝐫𝐚𝐭𝐢𝐨𝐧. 𝐔𝐬𝐞 𝐞.𝐠. 1h, 30m, 2d"))
-                return
-        
-        try:
-            permissions = ChatPermissions(can_send_messages=False)
-            await context.bot.restrict_chat_member(
-                update.effective_chat.id,
-                user_id,
-                permissions=permissions,
-                until_date=until_date
-            )
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-            user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
-            }
-            duration_display = duration_str if duration_str else ""
-            await update.message.reply_text(
-                self.formatter.mute_message(user_data, update.effective_user.full_name, duration_display),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐦𝐮𝐭𝐞: {str(e)}"))
-    
-    async def unmute_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        user_id, error = await self.get_target_user(update, context, "unmute")
-        if error:
-            await update.message.reply_text(error)
-            return
-        
-        try:
-            permissions = ChatPermissions(
-                can_send_messages=True,
-                can_send_media_messages=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True
-            )
-            await context.bot.restrict_chat_member(
-                update.effective_chat.id,
-                user_id,
-                permissions=permissions
-            )
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-            user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
-            }
-            await update.message.reply_text(
-                self.formatter.unmute_message(user_data, update.effective_user.full_name),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐮𝐧𝐦𝐮𝐭𝐞: {str(e)}"))
-    
-    async def kick_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        user_id, error = await self.get_target_user(update, context, "kick")
-        if error:
-            await update.message.reply_text(error)
-            return
-        
-        try:
-            await context.bot.ban_chat_member(update.effective_chat.id, user_id)
-            await context.bot.unban_chat_member(update.effective_chat.id, user_id)
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-            user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
-            }
-            await update.message.reply_text(
-                self.formatter.kick_message(user_data, update.effective_user.full_name),
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐤𝐢𝐜𝐤: {str(e)}"))
+        return user
     
     async def ban_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
+        """Ban a user - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
         
-        user_id, error = await self.get_target_user(update, context, "ban")
-        if error:
-            await update.message.reply_text(error)
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
             return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
         
         try:
-            await context.bot.ban_chat_member(update.effective_chat.id, user_id)
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+            await context.bot.ban_chat_member(chat_id, target_user.id)
             user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
+                'full_name': target_user.full_name,
+                'user_id': target_user.id,
+                'username': target_user.username or "N/A"
             }
             await update.message.reply_text(
-                self.formatter.ban_message(user_data, update.effective_user.full_name),
+                self.formatter.action_message("𝐁𝐚𝐧𝐧𝐞𝐝", user_data, update.effective_user.full_name),
                 parse_mode=ParseMode.MARKDOWN
             )
         except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐛𝐚𝐧: {str(e)}"))
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
     
     async def unban_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        args = context.args
-        if not args:
-            await update.message.reply_text(self.formatter.error_message("𝐏𝐫𝐨𝐯𝐢𝐝𝐞 𝐮𝐬𝐞𝐫 𝐈𝐃: /unban 123456789"))
-            return
-        try:
-            user_id = int(args[0])
-        except ValueError:
-            await update.message.reply_text(self.formatter.error_message("𝐈𝐧𝐯𝐚𝐥𝐢𝐝 𝐮𝐬𝐞𝐫 𝐈𝐃."))
+        """Unban a user - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
         
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
+        
         try:
-            await context.bot.unban_chat_member(update.effective_chat.id, user_id)
-            await update.message.reply_text(self.formatter.success_message(f"𝐔𝐬𝐞𝐫 {user_id} 𝐮𝐧𝐛𝐚𝐧𝐧𝐞𝐝."))
+            await context.bot.unban_chat_member(chat_id, target_user.id)
+            user_data = {
+                'full_name': target_user.full_name,
+                'user_id': target_user.id,
+                'username': target_user.username or "N/A"
+            }
+            await update.message.reply_text(
+                self.formatter.action_message("𝐔𝐧𝐛𝐚𝐧𝐧𝐞𝐝", user_data, update.effective_user.full_name),
+                parse_mode=ParseMode.MARKDOWN
+            )
         except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐮𝐧𝐛𝐚𝐧: {str(e)}"))
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
+    
+    async def kick_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Kick a user - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
+            return
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
+        
+        try:
+            await context.bot.ban_chat_member(chat_id, target_user.id)
+            await context.bot.unban_chat_member(chat_id, target_user.id)
+            user_data = {
+                'full_name': target_user.full_name,
+                'user_id': target_user.id,
+                'username': target_user.username or "N/A"
+            }
+            await update.message.reply_text(
+                self.formatter.action_message("𝐊𝐢𝐜𝐤𝐞𝐝", user_data, update.effective_user.full_name),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
+    
+    async def mute_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Mute a user - works with reply or username/ID, optional duration"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
+            return
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
+        
+        # Parse duration (default: 1 hour)
+        duration_minutes = 60
+        duration_text = "1 hour"
+        
+        if context.args and len(context.args) > 1:
+            try:
+                duration_minutes = int(context.args[1])
+                if duration_minutes < 1:
+                    duration_minutes = 1
+                if duration_minutes > 43200:  # Max 30 days
+                    duration_minutes = 43200
+                duration_text = f"{duration_minutes} minutes"
+            except:
+                pass
+        
+        until_date = datetime.now() + timedelta(minutes=duration_minutes)
+        permissions = ChatPermissions(can_send_messages=False)
+        
+        try:
+            await context.bot.restrict_chat_member(chat_id, target_user.id, permissions, until_date=until_date)
+            
+            # Store in muted_users
+            if chat_id not in self.muted_users:
+                self.muted_users[chat_id] = {}
+            self.muted_users[chat_id][target_user.id] = until_date
+            
+            user_data = {
+                'full_name': target_user.full_name,
+                'user_id': target_user.id,
+                'username': target_user.username or "N/A"
+            }
+            await update.message.reply_text(
+                self.formatter.action_message("𝐌𝐮𝐭𝐞𝐝", user_data, update.effective_user.full_name, duration_text),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
+    
+    async def unmute_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Unmute a user - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
+            return
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
+        
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_media_messages=True,
+            can_send_polls=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True
+        )
+        
+        try:
+            await context.bot.restrict_chat_member(chat_id, target_user.id, permissions)
+            
+            # Remove from muted_users
+            if chat_id in self.muted_users and target_user.id in self.muted_users[chat_id]:
+                del self.muted_users[chat_id][target_user.id]
+            
+            user_data = {
+                'full_name': target_user.full_name,
+                'user_id': target_user.id,
+                'username': target_user.username or "N/A"
+            }
+            await update.message.reply_text(
+                self.formatter.action_message("𝐔𝐧𝐦𝐮𝐭𝐞𝐝", user_data, update.effective_user.full_name),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
     
     async def warn_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        user_id, error = await self.get_target_user(update, context, "warn")
-        if error:
-            await update.message.reply_text(error)
+        """Warn a user - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
         
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
         
-        try:
-            self.db.add_warning(user_id, update.effective_chat.id, update.effective_user.id, reason)
-            warnings = self.db.get_warnings(user_id, update.effective_chat.id)
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-            user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
-            }
+        target_user = await self.extract_user(update, context)
+        if not target_user:
             await update.message.reply_text(
-                self.formatter.warn_message(user_data, update.effective_user.full_name, reason, len(warnings)),
-                parse_mode=ParseMode.MARKDOWN
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
             )
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐰𝐚𝐫𝐧: {str(e)}"))
-    
-    async def warnings_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
             return
         
-        if await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
-            user_id, error = await self.get_target_user(update, context, "warnings")
-            if error:
-                user_id = update.effective_user.id
+        chat_id = update.effective_chat.id
+        
+        # Initialize warns for this chat
+        if chat_id not in self.user_warns:
+            self.user_warns[chat_id] = {}
+        
+        # Get current warn count
+        current_warns = self.user_warns[chat_id].get(target_user.id, 0)
+        current_warns += 1
+        self.user_warns[chat_id][target_user.id] = current_warns
+        
+        user_data = {
+            'full_name': target_user.full_name,
+            'user_id': target_user.id,
+            'username': target_user.username or "N/A"
+        }
+        
+        # Auto-ban after 3 warns
+        if current_warns >= 3:
+            try:
+                await context.bot.ban_chat_member(chat_id, target_user.id)
+                await update.message.reply_text(
+                    self.formatter.action_message("𝐁𝐚𝐧𝐧𝐞𝐝 (3 𝐰𝐚𝐫𝐧𝐬)", user_data, update.effective_user.full_name),
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                # Reset warns
+                self.user_warns[chat_id][target_user.id] = 0
+            except Exception as e:
+                await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐛𝐚𝐧: {str(e)}"))
         else:
-            user_id = update.effective_user.id
-        
-        try:
-            warnings = self.db.get_warnings(user_id, update.effective_chat.id)
-            user = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-            user_data = {
-                'full_name': user.user.full_name,
-                'user_id': user.user.id,
-                'username': user.user.username
-            }
             await update.message.reply_text(
-                self.formatter.warnings_list(user_data, warnings),
+                self.formatter.warn_message(user_data, update.effective_user.full_name, current_warns),
                 parse_mode=ParseMode.MARKDOWN
             )
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐠𝐞𝐭 𝐰𝐚𝐫𝐧𝐢𝐧𝐠𝐬: {str(e)}"))
+    
+    async def warns_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show warns for a user"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
+            return
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
+            return
+        
+        target_user = await self.extract_user(update, context)
+        if not target_user:
+            await update.message.reply_text(
+                self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐮𝐬𝐞𝐫'𝐬 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐨𝐫 𝐩𝐫𝐨𝐯𝐢𝐝𝐞 @𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞/𝐈𝐃!")
+            )
+            return
+        
+        chat_id = update.effective_chat.id
+        warn_count = self.user_warns.get(chat_id, {}).get(target_user.id, 0)
+        
+        user_data = {
+            'full_name': target_user.full_name,
+            'user_id': target_user.id,
+            'username': target_user.username or "N/A"
+        }
+        
+        await update.message.reply_text(
+            self.formatter.user_info(user_data, update.effective_chat.title, warn_count),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     async def del_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
+        """Delete the replied message"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
-        if not await self.check_admin(update, context):
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
             return
         
         if not update.message.reply_to_message:
-            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞 𝐢𝐭."))
+            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞!"))
             return
         
         try:
             await update.message.reply_to_message.delete()
             await update.message.delete()
         except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞: {str(e)}"))
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
     
     async def pin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
+        """Pin the replied message"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
-        if not await self.check_admin(update, context):
+        
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
             return
         
         if not update.message.reply_to_message:
-            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐩𝐢𝐧 𝐢𝐭."))
+            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐩𝐢𝐧!"))
             return
         
         try:
-            await update.message.reply_to_message.pin(disable_notification=True)
-            await update.message.reply_text(self.formatter.success_message("𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐩𝐢𝐧𝐧𝐞𝐝."))
+            await context.bot.pin_chat_message(update.effective_chat.id, update.message.reply_to_message.message_id)
+            await update.message.reply_text(self.formatter.success_message("𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐩𝐢𝐧𝐧𝐞𝐝!"))
         except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐩𝐢𝐧: {str(e)}"))
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
     
     async def unpin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
+        """Unpin the replied message"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
         
-        try:
-            if update.message.reply_to_message:
-                await update.message.reply_to_message.unpin()
-            else:
-                await context.bot.unpin_chat_message(update.effective_chat.id)
-            await update.message.reply_text(self.formatter.success_message("𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐮𝐧𝐩𝐢𝐧𝐧𝐞𝐝."))
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐮𝐧𝐩𝐢𝐧: {str(e)}"))
-    
-    async def purge_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
+        if not await self.is_admin(context, update.effective_chat.id, update.effective_user.id):
+            await update.message.reply_text(self.formatter.error_message("𝐀𝐝𝐦𝐢𝐧 𝐨𝐧𝐥𝐲 𝐜𝐨𝐦𝐦𝐚𝐧𝐝!"))
             return
         
         if not update.message.reply_to_message:
-            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐩𝐮𝐫𝐠𝐞 𝐟𝐫𝐨𝐦 𝐭𝐡𝐞𝐫𝐞 𝐮𝐩𝐰𝐚𝐫𝐝𝐬."))
-            return
-        
-        args = context.args
-        count = 10
-        if args:
-            try:
-                count = int(args[0])
-                if count < 1 or count > 100:
-                    count = 10
-            except:
-                pass
-        
-        try:
-            start_msg = update.message.reply_to_message.message_id
-            end_msg = update.message.message_id
-            deleted = 0
-            for msg_id in range(start_msg, end_msg):
-                try:
-                    await context.bot.delete_message(update.effective_chat.id, msg_id)
-                    deleted += 1
-                except:
-                    pass
-            await update.message.reply_text(self.formatter.purge_message(deleted))
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐩𝐮𝐫𝐠𝐞: {str(e)}"))
-    
-    async def lock_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
+            await update.message.reply_text(self.formatter.error_message("𝐑𝐞𝐩𝐥𝐲 𝐭𝐨 𝐚 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐭𝐨 𝐮𝐧𝐩𝐢𝐧!"))
             return
         
         try:
-            permissions = ChatPermissions(
-                can_send_messages=False,
-                can_send_media_messages=False,
-                can_send_polls=False,
-                can_send_other_messages=False,
-                can_add_web_page_previews=False
-            )
-            await context.bot.set_chat_permissions(update.effective_chat.id, permissions)
-            self.db.set_group_lock(update.effective_chat.id, True)
-            await update.message.reply_text(self.formatter.success_message("𝐆𝐫𝐨𝐮𝐩 𝐥𝐨𝐜𝐤𝐞𝐝. 𝐎𝐧𝐥𝐲 𝐚𝐝𝐦𝐢𝐧𝐬 𝐜𝐚𝐧 𝐬𝐞𝐧𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞𝐬 𝐧𝐨𝐰."))
+            await context.bot.unpin_chat_message(update.effective_chat.id, update.message.reply_to_message.message_id)
+            await update.message.reply_text(self.formatter.success_message("𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐮𝐧𝐩𝐢𝐧𝐧𝐞𝐝!"))
         except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐥𝐨𝐜𝐤: {str(e)}"))
-    
-    async def unlock_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        try:
-            permissions = ChatPermissions(
-                can_send_messages=True,
-                can_send_media_messages=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True
-            )
-            await context.bot.set_chat_permissions(update.effective_chat.id, permissions)
-            self.db.set_group_lock(update.effective_chat.id, False)
-            await update.message.reply_text(self.formatter.success_message("𝐆𝐫𝐨𝐮𝐩 𝐮𝐧𝐥𝐨𝐜𝐤𝐞𝐝. 𝐄𝐯𝐞𝐫𝐲𝐨𝐧𝐞 𝐜𝐚𝐧 𝐬𝐞𝐧𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞𝐬."))
-        except Exception as e:
-            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝 𝐭𝐨 𝐮𝐧𝐥𝐨𝐜𝐤: {str(e)}"))
-    
-    async def settings_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
-            return
-        if not await self.check_admin(update, context):
-            return
-        
-        locked = self.db.is_group_locked(update.effective_chat.id)
-        await update.message.reply_text(
-            self.formatter.settings_text(update.effective_chat.id, locked),
-            parse_mode=ParseMode.MARKDOWN
-        )
+            await update.message.reply_text(self.formatter.error_message(f"𝐅𝐚𝐢𝐥𝐞𝐝: {str(e)}"))
     
     async def info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not await self.check_group_registered(update):
+        """Get user info - works with reply or username/ID"""
+        if update.effective_chat.type not in ["group", "supergroup"]:
             return
         
-        if update.message.reply_to_message:
-            target_user = update.message.reply_to_message.from_user
-        else:
+        target_user = await self.extract_user(update, context)
+        if not target_user:
             target_user = update.effective_user
+        
+        chat_id = update.effective_chat.id
+        warn_count = self.user_warns.get(chat_id, {}).get(target_user.id, 0)
         
         user_data = {
             'full_name': target_user.full_name or "User",
             'user_id': target_user.id,
             'username': target_user.username or "N/A"
         }
-        warnings = len(self.db.get_warnings(target_user.id, update.effective_chat.id))
         
         await update.message.reply_text(
-            self.formatter.user_info(user_data, update.effective_chat.title or "Group", warnings),
+            self.formatter.user_info(user_data, update.effective_chat.title or "Group", warn_count),
             parse_mode=ParseMode.MARKDOWN
         )
     
-    # ---------- Group Message Handlers ----------
     async def handle_group_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle messages in groups - Link Protection"""
         if not update.message or not update.message.text:
             return
         
         chat = update.effective_chat
         user = update.effective_user
         
+        # Check if user is muted
+        if chat.id in self.muted_users and user.id in self.muted_users[chat.id]:
+            expiry = self.muted_users[chat.id][user.id]
+            if datetime.now() < expiry:
+                try:
+                    await update.message.delete()
+                except:
+                    pass
+                return
+            else:
+                # Remove expired mute
+                del self.muted_users[chat.id][user.id]
+        
         group = self.db.get_group(chat.id)
         if not group:
             return
         
-        if self.db.is_group_locked(chat.id) and not await self.is_admin(context, chat.id, user.id):
-            try:
-                await update.message.delete()
-                logger.info(f"Deleted message from non-admin {user.id} in locked group {chat.id}")
-            except:
-                pass
+        if await self.is_admin(context, chat.id, user.id):
             return
         
-        if not await self.is_admin(context, chat.id, user.id) and self.contains_link(update.message.text):
+        if self.contains_link(update.message.text):
             try:
                 await update.message.delete()
                 logger.info(f"Deleted link message from {user.id} in {chat.id}")
@@ -1170,6 +847,7 @@ class BotHandlers:
                 logger.error(f"Failed to delete message: {e}")
     
     async def handle_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle new members joining"""
         if not update.message.new_chat_members:
             return
             
@@ -1211,7 +889,6 @@ class BotHandlers:
             except Exception as e:
                 logger.error(f"Failed to send welcome message: {e}")
     
-    # ---------- Private Chat Handlers ----------
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         
@@ -1246,6 +923,7 @@ class BotHandlers:
         )
     
     async def handle_reply_keyboard(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle button presses from ReplyKeyboardMarkup"""
         if update.effective_chat.type != "private":
             return
         
@@ -1356,6 +1034,7 @@ class BotHandlers:
         return ConversationHandler.END
     
     async def handle_chat_id_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle chat ID input for adding group"""
         text = update.message.text.strip()
         user_id = update.effective_user.id
         
@@ -1436,6 +1115,7 @@ class BotHandlers:
             return ASK_CHAT_ID
     
     async def handle_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle confirmation callback"""
         query = update.callback_query
         await query.answer()
         
@@ -1490,6 +1170,7 @@ class BotHandlers:
         return ConversationHandler.END
     
     async def handle_owner_callbacks(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle owner panel inline callbacks"""
         query = update.callback_query
         await query.answer()
         
@@ -1544,25 +1225,19 @@ def main():
     
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # Command handlers
+    # Command handlers for group moderation
     application.add_handler(CommandHandler("start", handlers.start_command))
-    application.add_handler(CommandHandler("info", handlers.info_command))
-    
-    # Admin commands
-    application.add_handler(CommandHandler("mute", handlers.mute_command))
-    application.add_handler(CommandHandler("unmute", handlers.unmute_command))
-    application.add_handler(CommandHandler("kick", handlers.kick_command))
     application.add_handler(CommandHandler("ban", handlers.ban_command))
     application.add_handler(CommandHandler("unban", handlers.unban_command))
+    application.add_handler(CommandHandler("kick", handlers.kick_command))
+    application.add_handler(CommandHandler("mute", handlers.mute_command))
+    application.add_handler(CommandHandler("unmute", handlers.unmute_command))
     application.add_handler(CommandHandler("warn", handlers.warn_command))
-    application.add_handler(CommandHandler("warnings", handlers.warnings_command))
+    application.add_handler(CommandHandler("warns", handlers.warns_command))
     application.add_handler(CommandHandler("del", handlers.del_command))
     application.add_handler(CommandHandler("pin", handlers.pin_command))
     application.add_handler(CommandHandler("unpin", handlers.unpin_command))
-    application.add_handler(CommandHandler("purge", handlers.purge_command))
-    application.add_handler(CommandHandler("lock", handlers.lock_command))
-    application.add_handler(CommandHandler("unlock", handlers.unlock_command))
-    application.add_handler(CommandHandler("settings", handlers.settings_command))
+    application.add_handler(CommandHandler("info", handlers.info_command))
     
     # Conversation handler for adding group
     conv_handler = ConversationHandler(
@@ -1571,8 +1246,7 @@ def main():
             ASK_CHAT_ID: [MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, handlers.handle_chat_id_input)],
             CONFIRM_ADD: [CallbackQueryHandler(handlers.handle_confirmation, pattern='^(confirm_add|cancel_add)$')],
         },
-        fallbacks=[MessageHandler(filters.Regex(f'^🔙 {bold_unicode("Back to Dashboard")}$') & filters.ChatType.PRIVATE, handlers.handle_reply_keyboard)],
-        per_message=False  # Add this to suppress warning
+        fallbacks=[MessageHandler(filters.Regex(f'^🔙 {bold_unicode("Back to Dashboard")}$') & filters.ChatType.PRIVATE, handlers.handle_reply_keyboard)]
     )
     application.add_handler(conv_handler)
     
@@ -1602,14 +1276,10 @@ def main():
     
     print(f"🤖 Bot started! Owner ID: {OWNER_ID}")
     print(f"📁 Database: {DATABASE_FILE}")
-    print("🌐 Flask dashboard running on http://localhost:8080")
+    print("🌐 Flask server running - Bot is alive!")
     print("Press Ctrl+C to stop")
     
-    try:
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
-    except Exception as e:
-        print(f"❌ Failed to start bot: {e}")
-        print("Please check your internet connection and bot token.")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()

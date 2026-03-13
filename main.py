@@ -859,59 +859,75 @@ class BotHandlers:
     
     async def handle_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle new members joining - with default profile picture"""
-        if not update.message.new_chat_members:
-            return
+        try:
+            if not update.message or not update.message.new_chat_members:
+                return
+                
+            chat = update.effective_chat
             
-        chat = update.effective_chat
-        
-        group = self.db.get_group(chat.id)
-        if not group:
-            logger.info(f"New member in unregistered group {chat.id}, skipping welcome")
-            return
-        
-        for new_member in update.message.new_chat_members:
-            if new_member.id == context.bot.id:
-                continue
+            # Debug log
+            logger.info(f"New member detected in chat {chat.id} - {chat.title}")
             
-            user_data = {
-                'full_name': new_member.full_name or "User",
-                'user_id': new_member.id,
-                'username': new_member.username or "N/A"
-            }
+            group = self.db.get_group(chat.id)
+            if not group:
+                logger.info(f"New member in unregistered group {chat.id}, skipping welcome")
+                return
             
-            # Try to get the user's profile photo
-            photo_id = await self.get_user_profile_photo(context, new_member.id)
-            welcome_text = self.formatter.welcome_message(user_data, chat.title or "Group")
-            
-            try:
-                if photo_id:
-                    # User has profile photo
-                    await context.bot.send_photo(
-                        chat.id,
-                        photo=photo_id,
-                        caption=welcome_text,
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                else:
-                    # User has no profile photo - send default image from URL
-                    await context.bot.send_photo(
-                        chat.id,
-                        photo=DEFAULT_PHOTO_URL,
-                        caption=welcome_text,
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                logger.info(f"Welcome message sent to {new_member.id} in {chat.id}")
-            except Exception as e:
-                logger.error(f"Failed to send welcome message: {e}")
-                # Fallback to text only if photo fails
+            for new_member in update.message.new_chat_members:
+                if new_member.id == context.bot.id:
+                    logger.info("Bot added to group, skipping welcome")
+                    continue
+                
+                logger.info(f"Processing new member: {new_member.id} - {new_member.full_name}")
+                
+                # Check if user exists in database, add if not
+                existing_user = self.db.get_user(new_member.id)
+                if not existing_user:
+                    self.db.add_user(new_member.id, new_member.username, new_member.full_name)
+                
+                user_data = {
+                    'full_name': new_member.full_name or "User",
+                    'user_id': new_member.id,
+                    'username': new_member.username or "N/A"
+                }
+                
+                # Try to get the user's profile photo
+                photo_id = await self.get_user_profile_photo(context, new_member.id)
+                welcome_text = self.formatter.welcome_message(user_data, chat.title or "Group")
+                
                 try:
-                    await context.bot.send_message(
-                        chat.id,
-                        welcome_text,
-                        parse_mode=ParseMode.MARKDOWN
-                    )
-                except:
-                    pass
+                    if photo_id:
+                        # User has profile photo
+                        await context.bot.send_photo(
+                            chat.id,
+                            photo=photo_id,
+                            caption=welcome_text,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                        logger.info(f"Welcome message with profile photo sent to {new_member.id}")
+                    else:
+                        # User has no profile photo - send default image from URL
+                        await context.bot.send_photo(
+                            chat.id,
+                            photo=DEFAULT_PHOTO_URL,
+                            caption=welcome_text,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                        logger.info(f"Welcome message with default photo sent to {new_member.id}")
+                except Exception as e:
+                    logger.error(f"Failed to send photo welcome message: {e}")
+                    # Fallback to text only if photo fails
+                    try:
+                        await context.bot.send_message(
+                            chat.id,
+                            welcome_text,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                        logger.info(f"Text-only welcome message sent to {new_member.id}")
+                    except Exception as e2:
+                        logger.error(f"Failed to send text welcome message: {e2}")
+        except Exception as e:
+            logger.error(f"Error in handle_new_member: {e}")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
@@ -1288,9 +1304,11 @@ def main():
         filters.TEXT & ~filters.COMMAND & filters.ChatType.GROUPS,
         handlers.handle_group_message
     ))
-    application.add_handler(MessageHandler(
-        filters.StatusUpdate.NEW_CHAT_MEMBERS,
-        handlers.handle_new_member
+    
+    # CRITICAL FIX: Use ChatMemberHandler for new members instead of MessageHandler
+    application.add_handler(ChatMemberHandler(
+        handlers.handle_new_member,
+        ChatMemberHandler.CHAT_MEMBER
     ))
     
     # Start Flask in a separate thread

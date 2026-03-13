@@ -229,7 +229,7 @@ class MessageFormatter:
 👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
 🆔 {bold_unicode('𝐔𝐬𝐞𝐫 𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
-🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} [🔗](tg://user?id={user_data.get('user_id')})
+🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} 🔗
 ⚡ {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨')} {group}
 {bold_unicode('𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 𝐣𝐨𝐢𝐧𝐞𝐝 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩!')}"""
 
@@ -274,6 +274,7 @@ class MessageFormatter:
 3️⃣ {bold_unicode('𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 𝐚𝐜𝐭𝐢𝐯𝐚𝐭𝐞𝐝:')}
    • 🎉 {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐦𝐞𝐬𝐬𝐚𝐠𝐞𝐬 𝐰𝐢𝐭𝐡 𝐩𝐡𝐨𝐭𝐨')}
    • 🔒 {bold_unicode('𝐋𝐢𝐧𝐤 𝐩𝐫𝐨𝐭𝐞𝐜𝐭𝐢𝐨𝐧')}
+   • 🚫 {bold_unicode('𝐀𝐮𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞 𝐟𝐨𝐫𝐰𝐚𝐫𝐝𝐞𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞𝐬')}
    • 🚫 {bold_unicode('𝐀𝐮𝐭𝐨 𝐝𝐞𝐥𝐞𝐭𝐞 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞𝐬/𝐢𝐧𝐯𝐢𝐭𝐞𝐬')}
 
 4️⃣ {bold_unicode('𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬:')}
@@ -320,6 +321,11 @@ class MessageFormatter:
 {bold_unicode('𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐰𝐢𝐭𝐡 𝐥𝐢𝐧𝐤 𝐰𝐚𝐬 𝐝𝐞𝐥𝐞𝐭𝐞𝐝')}"""
 
     @staticmethod
+    def forwarded_deleted_message() -> str:
+        return f"""🚫 {bold_unicode('𝐅𝐨𝐫𝐰𝐚𝐫𝐝𝐞𝐝 𝐌𝐞𝐬𝐬𝐚𝐠𝐞 𝐏𝐫𝐨𝐭𝐞𝐜𝐭𝐢𝐨𝐧')}
+{bold_unicode('𝐅𝐨𝐫𝐰𝐚𝐫𝐝𝐞𝐝 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐰𝐚𝐬 𝐝𝐞𝐥𝐞𝐭𝐞𝐝')}"""
+
+    @staticmethod
     def private_message(user_data: Dict) -> str:
         full_name = user_data.get('full_name', 'User')
         user_id = str(user_data.get('user_id', 'N/A'))
@@ -329,7 +335,7 @@ class MessageFormatter:
 👤 {bold_unicode('𝐍𝐚𝐦𝐞:')} {full_name}
 🆔 {bold_unicode('𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
-💋 {bold_unicode('𝐋𝐢𝐧𝐤:')} [🔗](tg://user?id={user_data.get('user_id')})
+💋 {bold_unicode('𝐋𝐢𝐧𝐤:')} 🔗
 ╰═══════《 💕 》═══════╝"""
 
     @staticmethod
@@ -384,7 +390,7 @@ class MessageFormatter:
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩:')} {chat}
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩 𝐈𝐃:')} {chat_id}
 ⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐬:')} {warn_count}
-🔗 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} [🔗](tg://user?id={user_data.get('user_id')})
+🔗 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} 🔗
 ╰═══════《 💫 》═══════╝"""
 
 # ==================== BOT HANDLERS ====================
@@ -392,7 +398,11 @@ class BotHandlers:
     def __init__(self, db: DatabaseManager):
         self.db = db
         self.formatter = MessageFormatter()
-        self.link_pattern = re.compile(r'(https?://|www\.|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?|t\.me/|@\w+)', re.IGNORECASE)
+        # Comprehensive link pattern
+        self.link_pattern = re.compile(
+            r'(https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?|t\.me/[^\s]+|@\w+)', 
+            re.IGNORECASE
+        )
         self.pending_confirmation = {}
         self.user_warns = {}  # Store warns: {chat_id: {user_id: count}}
         self.muted_users = {}  # Store muted users with expiration
@@ -406,6 +416,16 @@ class BotHandlers:
         except:
             return False
     
+    async def is_channel(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_id: int) -> bool:
+        """Check if message is from a linked channel"""
+        try:
+            chat = await context.bot.get_chat(chat_id)
+            if hasattr(chat, 'linked_chat_id') and chat.linked_chat_id == user_id:
+                return True
+        except:
+            pass
+        return False
+    
     async def get_user_profile_photo(self, context: ContextTypes.DEFAULT_TYPE, user_id: int):
         """Get user profile photo or return default"""
         try:
@@ -417,63 +437,18 @@ class BotHandlers:
         return None
     
     def contains_link(self, text: str) -> bool:
+        """Check if message contains any prohibited links"""
         if not text:
             return False
+        # Check for any link pattern
         return bool(self.link_pattern.search(text))
     
-    async def extract_user(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Extract user from reply or username/ID in command"""
-        user = None
-        
-        # Check if replying to a message
-        if update.message.reply_to_message:
-            user = update.message.reply_to_message.from_user
-            return user
-        
-        # Check if command has arguments (username or ID)
-        if context.args:
-            arg = context.args[0]
-            
-            # Check if it's a username (starts with @)
-            if arg.startswith('@'):
-                username = arg[1:].lower()
-                
-                # Try to get all administrators
-                try:
-                    chat = update.effective_chat
-                    admins = await context.bot.get_chat_administrators(chat.id)
-                    for admin in admins:
-                        if admin.user.username and admin.user.username.lower() == username:
-                            return admin.user
-                except Exception as e:
-                    logger.error(f"Error finding user by username: {e}")
-                    
-            # Check if it's a user ID
-            elif arg.lstrip('-').isdigit():
-                try:
-                    user_id = int(arg)
-                    # Try to get chat member
-                    chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-                    return chat_member.user
-                except:
-                    pass
-        
-        return None
-    
-    async def find_user_by_username(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, username: str):
-        """Find a user by username in the chat"""
-        username = username.lower().replace('@', '')
-        
-        try:
-            # Try to get all administrators
-            admins = await context.bot.get_chat_administrators(chat_id)
-            for admin in admins:
-                if admin.user.username and admin.user.username.lower() == username:
-                    return admin.user
-            return None
-        except Exception as e:
-            logger.error(f"Error finding user by username: {e}")
-            return None
+    def is_forwarded_from_channel(self, update: Update) -> bool:
+        """Check if message is forwarded from a channel"""
+        if not update.message:
+            return False
+        return (update.message.forward_from_chat is not None and 
+                update.message.forward_from_chat.type == "channel")
     
     async def ban_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Ban a user - works with reply or username/ID"""
@@ -917,8 +892,8 @@ class BotHandlers:
         )
     
     async def handle_group_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle messages in groups - Link Protection"""
-        if not update.message or not update.message.text:
+        """Handle messages in groups - Link Protection and Forwarded Message Protection"""
+        if not update.message:
             return
         
         chat = update.effective_chat
@@ -941,15 +916,40 @@ class BotHandlers:
         if not group:
             return
         
+        # Check if user is admin - allow everything
         if await self.is_admin(context, chat.id, user.id):
             return
         
-        if self.contains_link(update.message.text):
+        # Check if message is forwarded from a channel - delete if not from linked channel
+        if self.is_forwarded_from_channel(update):
+            try:
+                await update.message.delete()
+                logger.info(f"Deleted forwarded message from channel by {user.id} in {chat.id}")
+                # Optional: Send notification
+                # await context.bot.send_message(chat.id, self.formatter.forwarded_deleted_message())
+            except Exception as e:
+                logger.error(f"Failed to delete forwarded message: {e}")
+            return
+        
+        # Check for links in text messages
+        if update.message.text and self.contains_link(update.message.text):
             try:
                 await update.message.delete()
                 logger.info(f"Deleted link message from {user.id} in {chat.id}")
+                # Optional: Send notification
+                # await context.bot.send_message(chat.id, self.formatter.link_deleted_message())
             except Exception as e:
                 logger.error(f"Failed to delete message: {e}")
+            return
+        
+        # Check for links in caption (for media messages)
+        if update.message.caption and self.contains_link(update.message.caption):
+            try:
+                await update.message.delete()
+                logger.info(f"Deleted media with link from {user.id} in {chat.id}")
+            except Exception as e:
+                logger.error(f"Failed to delete media: {e}")
+            return
     
     async def handle_new_member(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle new members joining"""
@@ -997,6 +997,24 @@ class BotHandlers:
                 logger.info(f"Welcome message sent to {new_member.id} in {chat.id}")
             except Exception as e:
                 logger.error(f"Failed to send welcome message: {e}")
+    
+    async def find_user_by_username(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int, username: str):
+        """Find a user by username in the chat"""
+        username = username.lower().replace('@', '')
+        
+        try:
+            # Try to get all administrators
+            admins = await context.bot.get_chat_administrators(chat_id)
+            for admin in admins:
+                if admin.user.username and admin.user.username.lower() == username:
+                    return admin.user
+            
+            # For regular members, we can't get full list, so return None
+            # User should use reply method for non-admin members
+            return None
+        except Exception as e:
+            logger.error(f"Error finding user by username: {e}")
+            return None
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user

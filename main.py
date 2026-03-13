@@ -229,7 +229,7 @@ class MessageFormatter:
 👤 {bold_unicode('𝐔𝐬𝐞𝐫:')} {full_name}
 🆔 {bold_unicode('𝐔𝐬𝐞𝐫 𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
-🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞 𝐋𝐢𝐧𝐤:')} [🔗](tg://user?id={user_data.get('user_id')})
+🍑 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} [🔗](tg://user?id={user_data.get('user_id')})
 ⚡ {bold_unicode('𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨')} {group}
 {bold_unicode('𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐬𝐮𝐜𝐜𝐞𝐬𝐬𝐟𝐮𝐥𝐥𝐲 𝐣𝐨𝐢𝐧𝐞𝐝 𝐭𝐡𝐞 𝐠𝐫𝐨𝐮𝐩!')}"""
 
@@ -329,7 +329,7 @@ class MessageFormatter:
 👤 {bold_unicode('𝐍𝐚𝐦𝐞:')} {full_name}
 🆔 {bold_unicode('𝐈𝐃:')} {user_id}
 🌟 {bold_unicode('𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:')} @{username}
-💋 {bold_unicode('𝐋𝐢𝐧𝐤:')} (tg://user?id={user_data.get('user_id')})
+💋 {bold_unicode('𝐋𝐢𝐧𝐤:')} [🔗](tg://user?id={user_data.get('user_id')})
 ╰═══════《 💕 》═══════╝"""
 
     @staticmethod
@@ -384,7 +384,7 @@ class MessageFormatter:
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩:')} {chat}
 💬 {bold_unicode('𝐆𝐫𝐨𝐮𝐩 𝐈𝐃:')} {chat_id}
 ⚠️ {bold_unicode('𝐖𝐚𝐫𝐧𝐬:')} {warn_count}
-🔗 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} (tg://user?id={user_data.get('user_id')})
+🔗 {bold_unicode('𝐏𝐫𝐨𝐟𝐢𝐥𝐞:')} [🔗](tg://user?id={user_data.get('user_id')})
 ╰═══════《 💫 》═══════╝"""
 
 # ==================== BOT HANDLERS ====================
@@ -1012,18 +1012,24 @@ class BotHandlers:
             )
             return
         
+        # Create main dashboard keyboard with all buttons in rows
         keyboard = [
             [KeyboardButton(f"➕ {bold_unicode('Add Group')}"), KeyboardButton(f"📂 {bold_unicode('View Groups')}")],
             [KeyboardButton(f"📖 {bold_unicode('Guide / Help')}"), KeyboardButton(f"🔥 {bold_unicode('Private')}")],
         ]
         
+        # Add owner panel button in its own row if user is owner
         if user.id == OWNER_ID:
             keyboard.append([KeyboardButton(f"👑 {bold_unicode('Owner Panel')}")])
+        
+        # Add back button row for navigation
+        keyboard.append([KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")])
         
         reply_markup = ReplyKeyboardMarkup(
             keyboard,
             resize_keyboard=True,
-            one_time_keyboard=False
+            one_time_keyboard=False,
+            input_field_placeholder="Choose an option..."
         )
         
         await update.message.reply_text(
@@ -1044,13 +1050,16 @@ class BotHandlers:
         
         if text == f"➕ {bold_unicode('Add Group')}":
             context.user_data["in_conversation"] = True
+            # Show only back button during group addition
+            keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
             await update.message.reply_text(
                 self.formatter.add_group_instructions(),
-                reply_markup=ReplyKeyboardMarkup(
-                    [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]],
-                    resize_keyboard=True,
-                    one_time_keyboard=False
-                )
+                reply_markup=reply_markup
             )
             return ASK_CHAT_ID
         
@@ -1069,23 +1078,31 @@ class BotHandlers:
                         group['added_date'][:10]
                     ) + "\n"
             
+            # Show groups with back button only
+            keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            
             await update.message.reply_text(
                 reply,
-                reply_markup=ReplyKeyboardMarkup(
-                    [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]],
-                    resize_keyboard=True,
-                    one_time_keyboard=False
-                )
+                reply_markup=reply_markup
             )
         
         elif text == f"📖 {bold_unicode('Guide / Help')}":
+            # Show help with back button only
+            keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            
             await update.message.reply_text(
                 self.formatter.help_text(),
-                reply_markup=ReplyKeyboardMarkup(
-                    [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]],
-                    resize_keyboard=True,
-                    one_time_keyboard=False
-                )
+                reply_markup=reply_markup
             )
         
         elif text == f"🔥 {bold_unicode('Private')}":
@@ -1094,20 +1111,26 @@ class BotHandlers:
                 'user_id': update.effective_user.id,
                 'username': update.effective_user.username or "N/A"
             }
+            
+            # Show private message with back button only
+            keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            reply_markup = ReplyKeyboardMarkup(
+                keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            
             await update.message.reply_text(
                 self.formatter.private_message(user_data),
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=ReplyKeyboardMarkup(
-                    [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]],
-                    resize_keyboard=True,
-                    one_time_keyboard=False
-                )
+                reply_markup=reply_markup
             )
         
         elif text == f"👑 {bold_unicode('Owner Panel')}" and user_id == OWNER_ID:
             stats = self.db.get_stats()
             text = self.formatter.owner_panel_text(stats)
             
+            # Owner panel uses inline buttons for actions
             keyboard = [
                 [InlineKeyboardButton(f"📊 {bold_unicode('Total Groups')}", callback_data="owner_total_groups")],
                 [InlineKeyboardButton(f"👥 {bold_unicode('Total Users')}", callback_data="owner_total_users")],
@@ -1116,12 +1139,27 @@ class BotHandlers:
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
+            # Also show back button in reply keyboard
+            back_keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            back_reply_markup = ReplyKeyboardMarkup(
+                back_keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            
             await update.message.reply_text(
                 text,
                 reply_markup=reply_markup
             )
+            
+            # Send a separate message with back button
+            await update.message.reply_text(
+                f"{bold_unicode('Use the buttons above or click below to return:')}",
+                reply_markup=back_reply_markup
+            )
         
         elif text == f"🔙 {bold_unicode('Back to Dashboard')}":
+            # Go back to main dashboard with full keyboard
             keyboard = [
                 [KeyboardButton(f"➕ {bold_unicode('Add Group')}"), KeyboardButton(f"📂 {bold_unicode('View Groups')}")],
                 [KeyboardButton(f"📖 {bold_unicode('Guide / Help')}"), KeyboardButton(f"🔥 {bold_unicode('Private')}")],
@@ -1129,10 +1167,14 @@ class BotHandlers:
             if user_id == OWNER_ID:
                 keyboard.append([KeyboardButton(f"👑 {bold_unicode('Owner Panel')}")])
             
+            # Add back button row
+            keyboard.append([KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")])
+            
             reply_markup = ReplyKeyboardMarkup(
                 keyboard,
                 resize_keyboard=True,
-                one_time_keyboard=False
+                one_time_keyboard=False,
+                input_field_placeholder="Choose an option..."
             )
             
             await update.message.reply_text(
@@ -1149,6 +1191,7 @@ class BotHandlers:
         
         if text == f"🔙 {bold_unicode('Back to Dashboard')}":
             context.user_data["in_conversation"] = False
+            # Return to full dashboard
             keyboard = [
                 [KeyboardButton(f"➕ {bold_unicode('Add Group')}"), KeyboardButton(f"📂 {bold_unicode('View Groups')}")],
                 [KeyboardButton(f"📖 {bold_unicode('Guide / Help')}"), KeyboardButton(f"🔥 {bold_unicode('Private')}")],
@@ -1156,10 +1199,13 @@ class BotHandlers:
             if user_id == OWNER_ID:
                 keyboard.append([KeyboardButton(f"👑 {bold_unicode('Owner Panel')}")])
             
+            keyboard.append([KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")])
+            
             reply_markup = ReplyKeyboardMarkup(
                 keyboard,
                 resize_keyboard=True,
-                one_time_keyboard=False
+                one_time_keyboard=False,
+                input_field_placeholder="Choose an option..."
             )
             await update.message.reply_text(
                 self.formatter.dashboard_text(user_id),
@@ -1204,16 +1250,33 @@ class BotHandlers:
             }
             self.pending_confirmation[user_id] = group_info
             
+            # Create inline keyboard for confirmation
             keyboard = [
                 [
                     InlineKeyboardButton(f"✅ {bold_unicode('Yes, Add')}", callback_data="confirm_add"),
                     InlineKeyboardButton(f"❌ {bold_unicode('No, Cancel')}", callback_data="cancel_add")
                 ]
             ]
+            
+            # Also show back button in reply keyboard
+            back_keyboard = [[KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")]]
+            back_reply_markup = ReplyKeyboardMarkup(
+                back_keyboard,
+                resize_keyboard=True,
+                one_time_keyboard=False
+            )
+            
             await update.message.reply_text(
                 self.formatter.confirm_group(group_info),
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
+            
+            # Send a separate message with back button
+            await update.message.reply_text(
+                f"{bold_unicode('Click below to cancel and return:')}",
+                reply_markup=back_reply_markup
+            )
+            
             return CONFIRM_ADD
             
         except Exception as e:
@@ -1257,6 +1320,7 @@ class BotHandlers:
         
         context.user_data["in_conversation"] = False
         
+        # Return to full dashboard
         keyboard = [
             [KeyboardButton(f"➕ {bold_unicode('Add Group')}"), KeyboardButton(f"📂 {bold_unicode('View Groups')}")],
             [KeyboardButton(f"📖 {bold_unicode('Guide / Help')}"), KeyboardButton(f"🔥 {bold_unicode('Private')}")],
@@ -1264,10 +1328,13 @@ class BotHandlers:
         if user_id == OWNER_ID:
             keyboard.append([KeyboardButton(f"👑 {bold_unicode('Owner Panel')}")])
         
+        keyboard.append([KeyboardButton(f"🔙 {bold_unicode('Back to Dashboard')}")])
+        
         reply_markup = ReplyKeyboardMarkup(
             keyboard,
             resize_keyboard=True,
-            one_time_keyboard=False
+            one_time_keyboard=False,
+            input_field_placeholder="Choose an option..."
         )
         
         await context.bot.send_message(
